@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as req:
 setup(
   name='mongol',
   version= version,
-  description='Easy mongo access',
+  description='Easy MongoDB access',
   url='github.com/brumazzi/mongol',
   author='Brumazzi',
   author_email='brumazzi_daniel@yahoo.com.br',
