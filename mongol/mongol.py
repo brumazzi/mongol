@@ -48,6 +48,9 @@ class Mongol(object):
         self.id = self.table.insert_one(data_dict).inserted_id
         return True
 
+    def errors(self):
+        return self.validation_errors
+
     def is_valid(self):
         return self.__validate_fields()
 
@@ -112,7 +115,7 @@ class Mongol(object):
                         if value_max and len(value_field) > value_max:
                             self.validation_errors[field].append(f"Can't be bigger than {value_max} characters")
                         if value_min and len(value_field) < value_min:
-                            self.validation_errors[field].append(f"Can't be lower than {value_max} characters")
+                            self.validation_errors[field].append(f"Can't be lower than {value_min} characters")
                         pass
                 except: pass
 

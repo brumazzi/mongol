@@ -10,9 +10,11 @@ class Client(Mongol):
             "extra": {"type": dict, "default": {"a":4, "b":5}}
     }
 
-c = Client(name="One people")
+c = Client(name="One People")
 if c.is_valid():
     c.save()
+else:
+    print(c.errors())
 
 for client in Client.find():
     print(client)
