@@ -2,8 +2,8 @@ from pymongo import MongoClient
 import inflection
 
 class Mongol(object):
-    _id = None
-    validation_errors = dict()
+    _id: str = None
+    validation_errors: dict = dict()
 
     # Set field to use in project with validations
     # fields = {
@@ -19,28 +19,28 @@ class Mongol(object):
         self.__populate(**kwds)
 
     @classmethod
-    def find(self, **kwds):
+    def find(self, **query):
         if not hasattr(self.__class__, "table"): self.__sync_class()
         registers = list()
-        for data in self.table.find(kwds):
+        for data in self.table.find(query):
             registers.append(self(**data))
         return registers
 
     @classmethod
-    def find_one(self, **kwds):
+    def find_one(self, **query):
         if not hasattr(self.__class__, "table"): self.__sync_class()
-        return self(**self.table.find_one(kwds))
+        return self(**self.table.find_one(query))
 
     def destroy(self):
         return self.table.delete_one({"_id": self._id})
 
     @classmethod
-    def destroy_many(self, **kwds):
+    def destroy_many(self, **query):
         if not hasattr(self.__class__, "table"): self.__sync_class()
-        return self.table.delete_many(kwds)
+        return self.table.delete_many(query)
 
-    def save(self, **kwds):
-        if kwds.get("validation") != False and not self.__validate_fields():
+    def save(self, validation: str = True):
+        if validation != False and not self.__validate_fields():
             return False
         data_dict = dict()
         for field in self.fields:
@@ -92,35 +92,44 @@ class Mongol(object):
 
         return is_valid
 
-    def __validate_field(self, field, value):
+    def __validate_field(self, field: str, value):
         if value.__class__ == dict and value["type"]:
             value_field = self.__getattribute__(field)
             value_max = value.get('max')
             value_min = value.get('min')
             value_presence = value.get('presence')
+            value_unique = value.get('unique')
 
-            self.validation_errors.setdefault(field, [])
+            validation_errors = {}
+            validation_errors.setdefault(field, [])
+            print(validation_errors)
             if value_presence and value_field == None:
-                self.validation_errors[field].append(f"Can't be null")
+                validation_errors[field].append(f"Can't be null!")
+            if value_unique == True:
+                query = { field: f"{self.__getattribute__(field)}" }
+                if len(self.__class__.find(**query)) > 0:
+                    validation_errors[field].append(f'"{self.__getattribute__(field)}" is already being used!')
+                pass
             if value_field:
                 try:
                     if value_field.__class__ != value["type"]:
-                        self.validation_errors[field].append(f"\"{value_field.__class__.__name__}({value_field})\" is not a valid {value.get('type')}")
+                        validation_errors[field].append(f"\"{value_field.__class__.__name__}({value_field})\" is not a valid {value.get('type')}!")
                     if value["type"] == int:
                         if value_max and value_field > value_max:
-                            self.validation_errors[field].append(f"Can't be bigger than {value_max}")
+                            validation_errors[field].append(f"Can't be bigger than {value_max}!")
                         if value_min and value_field < value_min:
-                            self.validation_errors[field].append(f"Can't be lower than {value_min}")
+                            validation_errors[field].append(f"Can't be lower than {value_min}!")
                     elif value["type"] == str:
                         if value_max and len(value_field) > value_max:
-                            self.validation_errors[field].append(f"Can't be bigger than {value_max} characters")
+                            validation_errors[field].append(f"Can't be bigger than {value_max} characters!")
                         if value_min and len(value_field) < value_min:
-                            self.validation_errors[field].append(f"Can't be lower than {value_min} characters")
+                            validation_errors[field].append(f"Can't be lower than {value_min} characters!")
                         pass
                 except: pass
 
-        for field in self.validation_errors:
-            if len(self.validation_errors[field]) > 0:
+        for field in validation_errors:
+            if len(validation_errors[field]) > 0:
+                self.validation_errors = validation_errors
                 return False
         return True
 
@@ -131,6 +140,6 @@ class Mongol(object):
         output += ">"
         return output
 
-def listen(host = "localhost", port = 27017):
+def listen(host: str = "localhost", port: int = 27017):
     Mongol.connection = MongoClient(host, port)
 Mongol.listen = listen
