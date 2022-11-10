@@ -102,7 +102,6 @@ class Mongol(object):
 
             validation_errors = {}
             validation_errors.setdefault(field, [])
-            print(validation_errors)
             if value_presence and value_field == None:
                 validation_errors[field].append(f"Can't be null!")
             if value_unique == True:
