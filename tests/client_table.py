@@ -9,7 +9,7 @@ Mongol.listen()
 class Client(Mongol):
     fields = {
             "name": {"type": str, "min": 5, "max": 30, "presence": True, "unique": True},
-            "age": {"type": int, "min": 18, "default": 18},
+            "age": {"type": int, "min": 18, "default": 27},
             "extra": {"type": dict, "default": {"a":4, "b":5}}
     }
 
@@ -18,7 +18,8 @@ names = [
     "Alpha",
     "Person",
     "Alpha",
-    "Laster"
+    "Laster",
+    "Lancer"
 ]
 
 for name in names:

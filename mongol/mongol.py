@@ -39,7 +39,7 @@ class Mongol(object):
         if not hasattr(self.__class__, "table"): self.__sync_class()
         return self.table.delete_many(query)
 
-    def save(self, validation: str = True):
+    def save(self, validation: str = True) -> bool:
         if validation != False and not self.__validate_fields():
             return False
         data_dict = dict()
@@ -48,10 +48,10 @@ class Mongol(object):
         self.id = self.table.insert_one(data_dict).inserted_id
         return True
 
-    def errors(self):
+    def errors(self) -> dict:
         return self.validation_errors
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return self.__validate_fields()
 
     @classmethod
