@@ -1,36 +1,44 @@
+from __future__ import annotations
 import mongol
 
 Mongol = mongol.Mongol
 
 Mongol = mongol.Mongol
-Mongol.collection = "test-collection"
+Mongol.collection = "testCollection"
 Mongol.listen()
 
 class Client(Mongol):
     fields = {
-            "name": {"type": str, "min": 5, "max": 30, "presence": True, "unique": True},
-            "age": {"type": int, "min": 18, "default": 27},
-            "extra": {"type": dict, "default": {"a":4, "b":5}}
+        "name": "",
+        "age": 0,
+        "extra": {"if": "self['age'] < 18", "default": "Extra"}
     }
 
+    validates = [
+        {"field": "name", 'role': 'type', 'roleValue': str},
+        {"field": "age", 'role': 'required', 'roleValue': True}
+    ]
+
+Client.destroyMany()
+
 names = [
-    "Unonn",
-    "Alpha",
-    "Person",
-    "Alpha",
-    "Laster",
-    "Lancer"
+    ["Unonn", 19],
+    ["Alpha", 14],
+    ["Person", 18],
+    ["Alpha", None],
+    ["Laster", 20],
+    ["Lancer", 19],
+    [0, 7]
 ]
 
 for name in names:
-    c = Client(name= name)
-    if c.is_valid():
+    c = Client(name= name[0], age = name[1])
+    if c.isValid():
         c.save()
     else:
-        print(c.errors())
+        print(c.errors)
     del c
 
-print()
 
 for client in Client.find():
-    print(client)
+    print(client["_id"], client)
