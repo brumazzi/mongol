@@ -30,7 +30,7 @@ class Mongol(MongolField, MongolValidate):
         pass
 
     def destroy(self):
-        return self.table.delete_one({"_id": self["id"]})
+        return self.table.delete_one({"_id": self["_id"]})
 
     @classmethod
     def destroyMany(self, **query):
@@ -41,7 +41,7 @@ class Mongol(MongolField, MongolValidate):
         if validation:
             if not self.validate():
                 return False
-        self["id"] = self.table.insert_one(self.finalData()).inserted_id
+        self["_id"] = self.table.insert_one(self.finalData()).inserted_id
         return True
 
     @classmethod
