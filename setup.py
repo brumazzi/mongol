@@ -13,7 +13,8 @@ setup(
   author='Brumazzi',
   author_email='brumazzi_daniel@yahoo.com.br',
   license='MIT',
-  packages=['mongol'],
+  keywords=["mongo", "mongodb", "pymongo"],
+  packages=['mongol', "mongol.partials"],
   install_requires=requirements,
   python_requires=">=3.8.0",
   zip_safe=False
