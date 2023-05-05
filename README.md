@@ -14,25 +14,48 @@ pip install .
 ## How to use
 
 ```python
-from mongol import Mongol
+from __future__ import annotations
+import mongol
 
-# set database name
-Mongol.collection = "test-collection"
-# start connection with mongo db
+Mongol = mongol.Mongol
+
+Mongol = mongol.Mongol
+Mongol.collection = "testCollection"
 Mongol.listen()
 
-# create client table
 class Client(Mongol):
     fields = {
-            "name": {"type": str, "min": 5, "max": 30, "presence": True},
-            "age": {"type": int, "min": 18, "default": 18},
-            "extra": {"type": dict, "default": {"a":4, "b":5}}
+        "name": "",
+        "age": 0,
+        "extra": {"if": "self['age'] < 18", "default": "Extra"}
     }
 
-c = Client(name="One people")
-if c.is_valid():
-    c.save()
+    validates = [
+        {"field": "name", 'role': 'type', 'roleValue': str},
+        {"field": "age", 'role': 'required', 'roleValue': True}
+    ]
+
+Client.destroyMany()
+
+names = [
+    ["Unonn", 19],
+    ["Alpha", 14],
+    ["Person", 18],
+    ["Alpha", None],
+    ["Laster", 20],
+    ["Lancer", 19],
+    [0, 7]
+]
+
+for name in names:
+    c = Client(name= name[0], age = name[1])
+    if c.isValid():
+        c.save()
+    else:
+        print(c.errors)
+    del c
+
 
 for client in Client.find():
-    print(client)
+    print(client["_id"], client)
 ```
