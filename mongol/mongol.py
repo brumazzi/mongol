@@ -41,7 +41,7 @@ class Mongol(MongolField, MongolValidate):
         if not hasattr(self.__class__, "table"): self.__sync_class()
         return self.table.delete_many(query)
 
-    def save(self, validation: str = True) -> bool:
+    def save(self, validation: bool = True) -> bool:
         if validation:
             if not self.validate():
                 return False
