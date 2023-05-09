@@ -7,6 +7,7 @@ Mongol = mongol.Mongol
 Mongol.collection = "testCollection"
 Mongol.listen()
 
+
 class Client(Mongol):
     fields = {
         "name": "",
@@ -17,6 +18,13 @@ class Client(Mongol):
     validates = [
         {"field": "name", 'role': 'type', 'roleValue': str},
         {"field": "age", 'role': 'required', 'roleValue': True}
+    ]
+
+    def printOK(self):
+        print(self["name"])
+
+    beforeSave = [
+        "printOK"
     ]
 
 Client.destroyMany()

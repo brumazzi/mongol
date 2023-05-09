@@ -5,6 +5,8 @@ VALIDATE_ROLES_FORMAT   = "format"
 VALIDATE_ROLES_MAX      = "max"
 VALIDATE_ROLES_MIN      = "min"
 
+import hashlib
+
 class MongolValidate():
     roles: list[str] = [VALIDATE_ROLES_REQUIRED, VALIDATE_ROLES_TYPE, VALIDATE_ROLES_UNIQUE, VALIDATE_ROLES_FORMAT, VALIDATE_ROLES_MAX, VALIDATE_ROLES_MIN]
     validates: list[dict] = list()
@@ -25,25 +27,23 @@ class MongolValidate():
             if "if" in validate:
                 ifValidation = eval(validate.get("if"))
 
-            if role == "type" and ifValidation:
+            if role == VALIDATE_ROLES_TYPE and ifValidation:
                 if type(self[field]) != roleValue: tmp_valid = False
-            elif role == "required" and ifValidation:
+            elif role == VALIDATE_ROLES_REQUIRED and ifValidation:
                 if roleValue != True: continue
                 if self[field] == "" or self[field] == None: tmp_valid = False
-            elif role == "unique" and ifValidation:
+            elif role == VALIDATE_ROLES_UNIQUE and ifValidation:
                 pass
-            elif role == "format" and ifValidation:
+            elif role == VALIDATE_ROLES_FORMAT and ifValidation:
                 pass
-            elif role == "max" and ifValidation:
+            elif role == VALIDATE_ROLES_MAX and ifValidation:
                 if type(self[field]) == str and len(self[field]) > roleValue: tmp_valid = False
                 elif type(self[field]) == int or type(self[field]) == float:
                     if self[field] > roleValue: tmp_valid = False
-            elif role == "min" and ifValidation:
+            elif role == VALIDATE_ROLES_MIN and ifValidation:
                 if type(self[field]) == str and len(self[field]) < roleValue: tmp_valid = False
                 elif type(self[field]) == int or type(self[field]) == float:
                     if self[field] < roleValue: tmp_valid = False
-            elif role == "if" and ifValidation:
-                pass
 
             if not tmp_valid:
                 self.addValidateError(role, field, self[field], roleValue)

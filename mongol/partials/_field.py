@@ -1,10 +1,11 @@
 class MongolField(dict):
     fields: dict[str|dict] = dict()
 
+    beforeSave: list[any] = []
+    afterSave: list[any] = []
+
     def initFields(self):
         for field in self.fields.keys():
-            self.__setattr__(field, lambda: self[field])
-
             if type(self.fields.get(field)) == dict:
                 self[field] = self.fields.get(field).get("default")
             else:

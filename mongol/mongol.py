@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pymongo import MongoClient
 import inflection
 
@@ -19,11 +21,13 @@ class Mongol(MongolField, MongolValidate):
         registers = list()
         for data in self.table.find(query):
             registers.append(self(**data))
+            registers[-1]["_id"] = str(registers[-1]["_id"])
         return registers
 
     @classmethod
     def findOne(self, **query) -> list:
         if not hasattr(self.__class__, "table"): self.__sync_class()
+        self["_id"] = str(self["_id"])
         return self(**self.table.find_one(query))
 
     def start(self):
@@ -41,7 +45,11 @@ class Mongol(MongolField, MongolValidate):
         if validation:
             if not self.validate():
                 return False
-        self["_id"] = self.table.insert_one(self.finalData()).inserted_id
+        for func in self.beforeSave:
+            self.__getattribute__(func)()
+        self["_id"] = str(self.table.insert_one(self.finalData()).inserted_id)
+        for func in self.afterSave:
+            self.__getattribute__(func)()
         return True
 
     @classmethod
