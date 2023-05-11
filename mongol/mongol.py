@@ -1,76 +1,101 @@
 from __future__ import annotations
 
 from pymongo import MongoClient
+from pymongo.database import Database
+from pymongo.collection import Collection
+from pymongo.cursor import Cursor
+from bson.objectid import ObjectId
 import inflection
 
-from .partials import MongolField, MongolValidate
+from .partials import MongolData, MongolValidate
 
-class Mongol(MongolField, MongolValidate):
-    validation_errors: dict = dict()
+class Mongol(MongolData, MongolValidate):
+    database: str
+    databaseConn: Database = None
+    collection: Collection = None
+    collectionName: str
+    connection: MongoClient = None
+    host: str = "127.0.0.1"
+    port: int = 27017
 
     def __init__(self, **kwds):
-        if not hasattr(self.__class__, "table"): self.__sync()
+        self.__populate__(**kwds)
 
-        self.initFields()
-        self.populate(**kwds)
-        self.start()
-
-    @classmethod
-    def find(self, **query) -> list:
-        if not hasattr(self.__class__, "table"): self.__sync_class()
-        registers = list()
-        for data in self.table.find(query):
-            registers.append(self(**data))
-            registers[-1]["_id"] = str(registers[-1]["_id"])
-        return registers
-
-    @classmethod
-    def findOne(self, **query) -> list:
-        if not hasattr(self.__class__, "table"): self.__sync_class()
-        self["_id"] = str(self["_id"])
-        return self(**self.table.find_one(query))
-
-    def start(self):
-        pass
-
-    def destroy(self):
-        return self.table.delete_one({"_id": self["_id"]})
-
-    @classmethod
-    def destroyMany(self, **query):
-        if not hasattr(self.__class__, "table"): self.__sync_class()
-        return self.table.delete_many(query)
+    def __del__(self):
+        self.__close_db__()
 
     def save(self, validation: bool = True) -> bool:
+        self._sync_db_()
         if validation:
-            if not self.validate():
-                return False
-        for func in self.beforeSave:
-            self.__getattribute__(func)()
-        self["_id"] = str(self.table.insert_one(self.finalData()).inserted_id)
-        for func in self.afterSave:
-            self.__getattribute__(func)()
+            if not self.validate(): return False
+        for func in self.beforeSave: self.__getattribute__(func)()
+
+        if self.get("_id"):
+            result = self.collection.update_one({"_id": ObjectId(self["_id"])}, {"$set": self.dataToSave()})
+            if result.matched_count == 0: return False
+        else:
+            result = self.collection.insert_one(self.dataToSave())
+            if not result: return False
+            self["_id"] = str(result.inserted_id)
+
+        for func in self.afterSave: self.__getattribute__(func)()
+        self.__close_db__()
+        self.__update_dict_data__(**self.dataToSave())
         return True
 
-    @classmethod
-    def __sync_class(self):
-        self.connection = Mongol.connection
-        if not hasattr(self, "table_name"):
-            self.table_name = inflection.pluralize(inflection.underscore(self.__name__))
-        self.collection = self.connection[Mongol.collection]
-        self.table = self.collection[self.table_name]
+    def destroy(self) -> bool:
+        self._sync_db_()
+        result = self.collection.delete_one({"_id": ObjectId(self["_id"])})
+        if result.deleted_count == 0:
+            return False
+        self.__close_db__()
+        return True
 
-    def __sync(self):
-        self.connection = Mongol.connection
-        if not hasattr(self, "table_name"):
-            self.table_name = inflection.pluralize(inflection.underscore(self.__class__.__name__))
-        self.collection = self.connection[Mongol.collection]
-        self.table = self.collection[self.table_name]
+    def _sync_db_(self):
+        self.connection = MongoClient(Mongol.host, Mongol.port)
+        self.databaseConn = self.connection[Mongol.database]
+        self.collectionName = inflection.pluralize(inflection.underscore(self.__class__.__name__))
+        self.collection = self.databaseConn[self.collectionName]
+
+    @classmethod
+    def __sync_db__(self, _class) -> Collection:
+        connection = MongoClient(Mongol.host, Mongol.port)
+        databaseConn = connection[Mongol.database]
+        collectionName = inflection.pluralize(inflection.underscore(_class.__name__))
+        return databaseConn[collectionName]
+
+    @classmethod
+    def findOne(self, **kwds) -> Mongol | None:
+        collection: Collection = Mongol.__sync_db__(self)
+        if "_id" in kwds: kwds["_id"] = ObjectId(kwds["_id"])
+
+        register: dict = collection.find_one(kwds)
+
+        collection.database.client.close()
+        if not register: return None
+        register["_id"] = str(register["_id"])
+        return self(**register)
+
+    @classmethod
+    def find(self, **kwds) -> list[Mongol]:
+        collection: Collection = Mongol.__sync_db__(self)
+        if "_id" in kwds: kwds["_id"] = ObjectId(kwds["_id"])
+
+        cursor: Cursor[self] = collection.find(kwds)
+        registers: list[self] = list()
+        for item in cursor:
+            registers.append(self(**item))
+
+        collection.database.client.close()
+        return registers
+
+    def __close_db__(self):
+        if self.connection: self.connection.close()
 
     def __repr__(self):
         output = f"<{self.__class__.__name__}"
         for field in self.fields:
-            output += f" @{field}='{self[field]}'"
+            if self.get(field): output += f" @{field}='{self.get(field)}'"
         output += ">"
         return output
 
@@ -79,7 +104,3 @@ class Mongol(MongolField, MongolValidate):
 
     def __dict__(self):
         return dict(self)
-
-def listen(host: str = "localhost", port: int = 27017):
-    Mongol.connection = MongoClient(host, port)
-Mongol.listen = listen

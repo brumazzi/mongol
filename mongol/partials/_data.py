@@ -1,5 +1,6 @@
-class MongolField(dict):
+class MongolData(dict):
     fields: dict[str|dict] = dict()
+    __db__: dict[any]
 
     beforeSave: list[any] = []
     afterSave: list[any] = []
@@ -11,7 +12,7 @@ class MongolField(dict):
             else:
                 self[field] = self.fields.get(field)
 
-    def finalData(self):
+    def dataToSave(self):
         data: dict[any] = dict()
         for key in self.keys():
             fieldDescription = self.fields.get(key)
@@ -22,9 +23,20 @@ class MongolField(dict):
                             continue
                     except:
                         pass
-                data[key] = self[key]
+                if data.get("__db__"):
+                    if data.get("__db__").get(key) != self[key]:
+                        data[key] = self[key]
+                else:
+                    data[key] = self[key]
         return data
 
-    def populate(self, **kwds):
+    def __populate__(self, **kwds):
+        if not "_id" in kwds: self.initFields()
+        self.__db__ = {}
         for key in kwds:
+            if "_id" in kwds and key != "_id": self.__db__[key] = kwds[key]
             self[key] = kwds[key]
+
+    def __update_dict_data__(self, **kwds):
+        for key in kwds:
+            self.__db__[key] = kwds[key]

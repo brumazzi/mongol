@@ -12,7 +12,7 @@ class MongolValidate():
     validates: list[dict] = list()
     errors: dict[dict] = dict()
 
-    def validate(self):
+    def validate(self) -> bool:
         is_valid = True
         self.errors.clear()
         for validate in self.validates:
@@ -76,19 +76,5 @@ class MongolValidate():
             self.errors[field] = [errorMessage]
         pass
 
-    def isValid(self):
+    def isValid(self) -> bool:
         return self.validate()
-
-    def addRole(self, field: str, roles: dict, _if: str = ""):
-        if _if == "": _if = "True"
-
-        for role in roles.keys():
-            if not role in MongolValidate.roles: continue
-
-            self.validates.append({
-                "field": field,
-                "role": role,
-                "roleValue": roles[role],
-                "if": _if
-            })
-        pass
