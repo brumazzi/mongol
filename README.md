@@ -20,7 +20,6 @@ import mongol
 Mongol = mongol.Mongol
 
 Mongol.database = "testCollection"
-Mongol.listen()
 
 class Client(Mongol):
     fields = {
