@@ -19,8 +19,7 @@ import mongol
 
 Mongol = mongol.Mongol
 
-Mongol = mongol.Mongol
-Mongol.collection = "testCollection"
+Mongol.database = "testCollection"
 Mongol.listen()
 
 class Client(Mongol):
