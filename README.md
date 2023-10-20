@@ -19,7 +19,7 @@ import mongol
 
 Mongol = mongol.Mongol
 
-Mongol.database = "testCollection"
+Mongol.database = "testDatabase"
 
 class Client(Mongol):
     fields = {
