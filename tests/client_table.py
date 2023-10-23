@@ -5,8 +5,6 @@ Mongol = mongol.Mongol
 
 Mongol = mongol.Mongol
 Mongol.collection = "testCollection"
-Mongol.listen()
-
 
 class Client(Mongol):
     fields = {

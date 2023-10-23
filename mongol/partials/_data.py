@@ -24,10 +24,10 @@ class MongolData(dict):
                     except:
                         pass
                 if data.get("__db__"):
-                    if data.get("__db__").get(key) != self[key]:
-                        data[key] = self[key]
+                    if data.get("__db__").get(key) != self.get(key):
+                        data[key] = self.get(key)
                 else:
-                    data[key] = self[key]
+                    data[key] = self.get(key)
         return data
 
     def __populate__(self, **kwds):

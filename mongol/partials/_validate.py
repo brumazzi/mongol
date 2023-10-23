@@ -28,25 +28,25 @@ class MongolValidate():
                 ifValidation = eval(validate.get("if"))
 
             if role == VALIDATE_ROLES_TYPE and ifValidation:
-                if type(self[field]) != roleValue: tmp_valid = False
+                if type(self.get(field)) != roleValue: tmp_valid = False
             elif role == VALIDATE_ROLES_REQUIRED and ifValidation:
                 if roleValue != True: continue
-                if self[field] == "" or self[field] == None: tmp_valid = False
+                if self.get(field) == "" or self.get(field) == None: tmp_valid = False
             elif role == VALIDATE_ROLES_UNIQUE and ifValidation:
                 pass
             elif role == VALIDATE_ROLES_FORMAT and ifValidation:
                 pass
             elif role == VALIDATE_ROLES_MAX and ifValidation:
-                if type(self[field]) == str and len(self[field]) > roleValue: tmp_valid = False
-                elif type(self[field]) == int or type(self[field]) == float:
-                    if self[field] > roleValue: tmp_valid = False
+                if type(self.get(field)) == str and len(self.get(field)) > roleValue: tmp_valid = False
+                elif type(self.get(field)) == int or type(self.get(field)) == float:
+                    if self.get(field) > roleValue: tmp_valid = False
             elif role == VALIDATE_ROLES_MIN and ifValidation:
-                if type(self[field]) == str and len(self[field]) < roleValue: tmp_valid = False
-                elif type(self[field]) == int or type(self[field]) == float:
-                    if self[field] < roleValue: tmp_valid = False
+                if type(self.get(field)) == str and len(self.get(field)) < roleValue: tmp_valid = False
+                elif type(self.get(field)) == int or type(self.get(field)) == float:
+                    if self.get(field) < roleValue: tmp_valid = False
 
             if not tmp_valid:
-                self.addValidateError(role, field, self[field], roleValue)
+                self.addValidateError(role, field, self.get(field), roleValue)
                 is_valid = tmp_valid
 
         return is_valid

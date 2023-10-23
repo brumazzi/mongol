@@ -43,6 +43,10 @@ class Mongol(MongolData, MongolValidate):
         self.__update_dict_data__(**self.dataToSave())
         return True
 
+    def update(self, **kwds):
+        self.__populate__(**kwds)
+        return self.save()
+
     def destroy(self) -> bool:
         self._sync_db_()
         result = self.collection.delete_one({"_id": ObjectId(self["_id"])})
@@ -65,11 +69,11 @@ class Mongol(MongolData, MongolValidate):
         return databaseConn[collectionName]
 
     @classmethod
-    def findOne(self, **kwds) -> Mongol | None:
+    def findOne(self, filter={}, projection={}) -> Mongol | None:
         collection: Collection = Mongol.__sync_db__(self)
-        if "_id" in kwds: kwds["_id"] = ObjectId(kwds["_id"])
+        if "_id" in filter: filter["_id"] = ObjectId(filter["_id"])
 
-        register: dict = collection.find_one(kwds)
+        register: dict = collection.find_one(filter, projection)
 
         collection.database.client.close()
         if not register: return None
@@ -77,13 +81,14 @@ class Mongol(MongolData, MongolValidate):
         return self(**register)
 
     @classmethod
-    def find(self, **kwds) -> list[Mongol]:
+    def find(self, filter={}, projection={}) -> list[Mongol]:
         collection: Collection = Mongol.__sync_db__(self)
-        if "_id" in kwds: kwds["_id"] = ObjectId(kwds["_id"])
+        if "_id" in filter: filter["_id"] = ObjectId(filter["_id"])
 
-        cursor: Cursor[self] = collection.find(kwds)
+        cursor: Cursor[self] = collection.find(filter, projection)
         registers: list[self] = list()
         for item in cursor:
+            item["_id"] = str(item["_id"])
             registers.append(self(**item))
 
         collection.database.client.close()
