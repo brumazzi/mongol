@@ -15,45 +15,82 @@ pip install .
 
 ```python
 from __future__ import annotations
-import mongol
+from mongol import Mongol
 
-Mongol = mongol.Mongol
-
-Mongol.database = "testDatabase"
+Mongol.DATABASE = "testDatabase"
 
 class Client(Mongol):
-    fields = {
-        "name": "",
-        "age": 0,
-        "extra": {"if": "self['age'] < 18", "default": "Extra"}
-    }
+    name: str
+    age: int
+    _delete: bool
 
-    validates = [
-        {"field": "name", 'role': 'type', 'roleValue': str},
-        {"field": "age", 'role': 'required', 'roleValue': True}
-    ]
+    def printChangesIfExistsBeforeSave(self):
+        if not self.changes: return None
+        print("=========")
+        print(self.changes)
+        print("=========")
 
-Client.destroyMany()
+    def printSuccess__AfterSave(self): # can add underscore to separe callback type
+        print("Saved with success!")
 
-names = [
-    ["Unonn", 19],
-    ["Alpha", 14],
-    ["Person", 18],
-    ["Alpha", None],
-    ["Laster", 20],
-    ["Lancer", 19],
-    [0, 7]
-]
+    def canDelete__BeforeDelete(self):
+        if self._delete != True:
+            self.error = {f"{self.__class__.__name__}": "Need check \"_delete\" with True to continue!"}
 
-for name in names:
-    c = Client(name= name[0], age = name[1])
-    if c.isValid():
-        c.save()
-    else:
-        print(c.errors)
-    del c
+    def success__AfterDelete(self):
+        print("Delete success!")
+
+    def minAgeValidation(self):
+        if type(self.age) is int and self.age < 18:
+            self.error = {"age": "Age needed be greater then 18 to register!"}
+
+    def invalidNames__Validation(self): # can add underscore to separe callback type
+        if self.name.lower() in ["qwerty", "asdf"]:
+            self.error = {"name": f"Name can't be {self.name}"}
 
 
-for client in Client.find():
-    print(client["_id"], client)
+################################################
+
+client: Client = Client(name="Qwerty", age=16)
+
+if not client.save():
+    for error, message in client.errors.items():
+        print(f"{error}: {message}")
+
+print("------------------------------------")
+
+client.name = "Person"
+client.age = "25"
+
+if not client.save():
+    for error, message in client.errors.items():
+        print(f"{error}: {message}")
+
+client.age = 20
+
+print("------------------------------------")
+
+if not client.save():
+    for error, message in client.errors.items():
+        print(f"{error}: {message}")
+
+id = client._id
+
+del client
+
+print("------------------------------------")
+
+existsClient: Client = Client.findOne(filter={"_id": id}, format=object)
+existsClient.update(name="Person Janckson")
+
+print("------------------------------------")
+
+if not existsClient.delete():
+    for error, message in existsClient.errors.items():
+        print(f"{error}: {message}")
+
+print("------------------------------------")
+
+existsClient._delete = True
+existsClient.delete()
 ```
