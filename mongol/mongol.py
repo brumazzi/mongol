@@ -21,6 +21,7 @@ class Mongol(Query, Data, Automation):
     _before_validates: list = None
     _after_validates: list = None
     _validations: list = None
+    _validation_vars: list = None
 
     _id: ObjectId = None
     _db_data: dict = None
@@ -31,6 +32,7 @@ class Mongol(Query, Data, Automation):
             raise "Mongol can not be instantiated"
 
         self._errors = {}
+        self._validation_vars = []
         self._before_creates = []
         self._after_creates = []
         self._before_deletes = []
@@ -43,9 +45,11 @@ class Mongol(Query, Data, Automation):
         self._id = None
         self._db_data = None
         self._db_data_before_save = None
-        self.syncMethods()
 
         for field in self.__annotations__:
+            if not hasattr(self, field):
+                self.__setattr__(field, None)
+            self.registerValidation(field)
             self.__setattr__(field, None)
 
         for key in kwds.keys():
@@ -53,7 +57,8 @@ class Mongol(Query, Data, Automation):
                 self.__setattr__(key, ObjectId(kwds.get(key)))
             else:
                 self.__setattr__(key, kwds.get(key))
-        pass
+
+        self.syncMethods()
 
     @property
     def collection(self) -> Collection:

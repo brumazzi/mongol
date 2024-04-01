@@ -4,3 +4,4 @@ build
 mongol.old
 pyvenv.cfg
 venv
+dist

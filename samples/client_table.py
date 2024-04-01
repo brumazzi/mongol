@@ -1,50 +1,75 @@
 from __future__ import annotations
-import mongol
+from mongol import Mongol, Validation
 
-Mongol = mongol.Mongol
-
-Mongol = mongol.Mongol
-Mongol.collection = "testCollection"
+Mongol.DATABASE = "testDatabase"
 
 class Client(Mongol):
-    fields = {
-        "name": "",
-        "age": 0,
-        "extra": {"if": "self['age'] < 18", "default": "Extra"}
-    }
+    name: str = Validation(required=True)
+    age: int = Validation(min=18)
+    _delete: bool
 
-    validates = [
-        {"field": "name", 'role': 'type', 'roleValue': str},
-        {"field": "age", 'role': 'required', 'roleValue': True}
-    ]
+    def printChangesIfExists__BeforeSave(self):
+        if not self.changes: return None
+        print("=========")
+        print(self.changes)
+        print("=========")
 
-    def printOK(self):
-        print(self["name"])
+    def printSuccess__AfterSave(self):
+        print("Saved with success!")
 
-    beforeSave = [
-        "printOK"
-    ]
+    def canDelete__BeforeDelete(self):
+        if self._delete != True:
+            self.error = f"{self.__class__.__name__}", "Need check \"_delete\" with True to continue!"
 
-Client.destroyMany()
+    def success__AfterDelete(self):
+        print("Delete success!")
 
-names = [
-    ["Unonn", 19],
-    ["Alpha", 14],
-    ["Person", 18],
-    ["Alpha", None],
-    ["Laster", 20],
-    ["Lancer", 19],
-    [0, 7]
-]
-
-for name in names:
-    c = Client(name= name[0], age = name[1])
-    if c.isValid():
-        c.save()
-    else:
-        print(c.errors)
-    del c
+    def invalidNames__Validation(self):
+        if self.name.lower() in ["qwerty", "asdf"]:
+            self.error = "name", f"Name can't be {self.name}"
 
 
-for client in Client.find():
-    print(client["_id"], client)
+################################################
+
+client: Client = Client(name="Qwerty", age=16)
+
+if not client.save():
+    for error, message in client.errors.items():
+        print(f"{error}: {message}")
+
+print("------------------------------------")
+
+client.name = "Person"
+client.age = "25"
+
+if not client.save():
+    for error, message in client.errors.items():
+        print(f"{error}: {message}")
+
+client.age = 20
+
+print("------------------------------------")
+
+if not client.save():
+    for error, message in client.errors.items():
+        print(f"{error}: {message}")
+
+id = client._id
+
+del client
+
+print("------------------------------------")
+
+existsClient: Client = Client.findOne(filter={"_id": id}, format=object)
+existsClient.update(name="Person Janckson")
+
+print("------------------------------------")
+
+if not existsClient.delete():
+    for error, message in existsClient.errors.items():
+        print(f"{error}: {message}")
+
+print("------------------------------------")
+
+existsClient._delete = True
+existsClient.delete()

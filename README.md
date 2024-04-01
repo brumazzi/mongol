@@ -15,38 +15,34 @@ pip install .
 
 ```python
 from __future__ import annotations
-from mongol import Mongol
+from mongol import Mongol, Validation
 
 Mongol.DATABASE = "testDatabase"
 
 class Client(Mongol):
-    name: str
-    age: int
+    name: str = Validation(required=True)
+    age: int = Validation(min=18)
     _delete: bool
 
-    def printChangesIfExistsBeforeSave(self):
+    def printChangesIfExists__BeforeSave(self):
         if not self.changes: return None
         print("=========")
         print(self.changes)
         print("=========")
 
-    def printSuccess__AfterSave(self): # can add underscore to separe callback type
+    def printSuccess__AfterSave(self):
         print("Saved with success!")
 
     def canDelete__BeforeDelete(self):
         if self._delete != True:
-            self.error = {f"{self.__class__.__name__}": "Need check \"_delete\" with True to continue!"}
+            self.error = f"{self.__class__.__name__}", "Need check \"_delete\" with True to continue!"
 
     def success__AfterDelete(self):
         print("Delete success!")
 
-    def minAgeValidation(self):
-        if type(self.age) is int and self.age < 18:
-            self.error = {"age": "Age needed be greater then 18 to register!"}
-
-    def invalidNames__Validation(self): # can add underscore to separe callback type
+    def invalidNames__Validation(self):
         if self.name.lower() in ["qwerty", "asdf"]:
-            self.error = {"name": f"Name can't be {self.name}"}
+            self.error = "name", f"Name can't be {self.name}"
 
 
 ################################################

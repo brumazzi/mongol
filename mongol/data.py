@@ -3,7 +3,7 @@ from __future__ import annotations
 from pymongo.cursor import Cursor
 from bson.objectid import ObjectId
 from mongol.connection import db_connect, Connection, MorphicCollection
-from mongol.validation import Validation
+from mongol.validation import Validation, DataValidation
 from mongol.automation import run_before_after
 
 import re
@@ -116,7 +116,7 @@ class Query():
         del conn
         return res
 
-class Data(Validation):
+class Data(DataValidation):
 
     def save(self, skipValidate=False) -> bool:
         if not skipValidate:
@@ -216,6 +216,7 @@ class Data(Validation):
 
     @property
     def dataDBChanged(self) -> dict:
+        print(self._db_data)
         return { k: self._db_data_before_save.get(k) for k in self.fields }
 
     @property
@@ -224,4 +225,4 @@ class Data(Validation):
 
     @property
     def isNew(self) -> bool:
-        return self._id == False
+        return self._id == None

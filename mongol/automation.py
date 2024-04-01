@@ -26,37 +26,37 @@ class Automation:
 
     def syncBeforeDeletes(self):
         for attr in dir(self):
-            if not attr.startswith("sync") and attr.endswith("BeforeDelete") and type(self.__getattribute__(attr)).__name__ == "method":
+            if not attr.startswith("sync") and attr.endswith("__BeforeDelete") and type(self.__getattribute__(attr)).__name__ == "method":
                 self._before_deletes.append(self.__getattribute__(attr))
         pass
     def syncAfterDeletes(self):
         for attr in dir(self):
-            if not attr.startswith("sync") and attr.endswith("AfterDelete") and type(self.__getattribute__(attr)).__name__ == "method":
+            if not attr.startswith("sync") and attr.endswith("__AfterDelete") and type(self.__getattribute__(attr)).__name__ == "method":
                 self._after_deletes.append(self.__getattribute__(attr))
         pass
     def syncBeforeSaves(self):
         for attr in dir(self):
-            if not attr.startswith("sync") and attr.endswith("BeforeSave") and type(self.__getattribute__(attr)).__name__ == "method":
+            if not attr.startswith("sync") and attr.endswith("__BeforeSave") and type(self.__getattribute__(attr)).__name__ == "method":
                 self._before_saves.append(self.__getattribute__(attr))
         pass
     def syncAfterSaves(self):
         for attr in dir(self):
-            if not attr.startswith("sync") and attr.endswith("AfterSave") and type(self.__getattribute__(attr)).__name__ == "method":
+            if not attr.startswith("sync") and attr.endswith("__AfterSave") and type(self.__getattribute__(attr)).__name__ == "method":
                 self._after_saves.append(self.__getattribute__(attr))
         pass
     def syncBeforeValidates(self):
         for attr in dir(self):
-            if not attr.startswith("sync") and attr.endswith("BeforeValidate") and type(self.__getattribute__(attr)).__name__ == "method":
+            if not attr.startswith("sync") and attr.endswith("__BeforeValidate") and type(self.__getattribute__(attr)).__name__ == "method":
                 self._before_validates.append(self.__getattribute__(attr))
         pass
     def syncAfterValidates(self):
         for attr in dir(self):
-            if not attr.startswith("sync") and attr.endswith("AfterValidate") and type(self.__getattribute__(attr)).__name__ == "method":
+            if not attr.startswith("sync") and attr.endswith("__AfterValidate") and type(self.__getattribute__(attr)).__name__ == "method":
                 self._after_validates.append(self.__getattribute__(attr))
         pass
     def syncValidations(self):
         for attr in dir(self):
-            if not attr.startswith("sync") and attr.endswith("Validation") and type(self.__getattribute__(attr)).__name__ == "method":
+            if not attr.startswith("sync") and attr.endswith("__Validation") and type(self.__getattribute__(attr)).__name__ == "method":
                 self._validations.append(self.__getattribute__(attr))
         pass
     pass
