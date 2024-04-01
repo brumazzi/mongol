@@ -17,52 +17,38 @@ def matchRecursiveID(data: dict):
         elif not re.sub("(\\w.+_id|_id)", "", key):
             data[key] = ObjectId(data[key])
 
-def openReferenceTree(data: dict, connection: Connection):
+def openReferenceTree(data: dict, connection: Connection, recursiveLevel=1):
+    if recursiveLevel == 0: return
+
     for key, value in data.items():
         if type(value) is list:
             for v in value:
-                if type(value) is dict: openReferenceTree(value, connection)
+                if type(value) is dict: openReferenceTree(value, connection, recursiveLevel-1)
         if type(value) is dict:
-            openReferenceTree(value)
+            openReferenceTree(value, connection, recursiveLevel-1)
         if not re.sub("\\w.+_id", "", key) and value:
             collectionName: str = key[:-3]
-
-            if value.__str__() in openReferenceTree.findedIds[collectionName]:
-                data[key] = ObjectId(value)
-                continue
-
-            if not collectionName in openReferenceTree.findedIds:
-                openReferenceTree.findedIds[collectionName] = []
-            openReferenceTree.findedIds[collectionName].append(value.__str__())
 
             morth = MorphicCollection(connection, collectionName)
             result = morth.find(value)
             data[key] = result
 
-            openReferenceTree(result, connection)
+            openReferenceTree(result, connection, recursiveLevel-1)
         if not re.sub("\\w.+_ids", "", key):
             collectionName: str = key[:-4]
             dataList: list = list()
-            if not collectionName in openReferenceTree.findedIds:
-                openReferenceTree.findedIds[collectionName] = []
 
             for v in value:
-                if v.__str__() in openReferenceTree.findedIds[collectionName]:
-                    data[key] = ObjectId(v)
-                    continue
-
                 morth = MorphicCollection(connection, collectionName)
                 result = morth.find(v)
                 dataList.append(result)
 
-                openReferenceTree.findedIds[collectionName].append(v.__str__())
-                openReferenceTree(result, connection)
+                openReferenceTree(result, connection, recursiveLevel-1)
             data[key] = dataList
-openReferenceTree.findedIds = {}
 
 class Query():
     @classmethod
-    def find(self, format=dict, filter={}, projection={}, recursive=False, **kwds) -> list[dict|any]:
+    def find(self, format=dict, filter={}, projection={}, recursiveLevel=1, **kwds) -> list[dict|any]:
         matchRecursiveID(filter)
         conn = Connection(self)
         cursor: Cursor[self] = conn.collection.find(filter, projection, **kwds)
@@ -76,16 +62,14 @@ class Query():
                 data.append(mongol)
         else:
             data = [ dict(item) for item in cursor ]
-            if recursive:
-                for d in data:
-                    openReferenceTree(d, conn)
+            for d in data:
+                openReferenceTree(d, conn, recursiveLevel)
 
         del conn
-        print(openReferenceTree.findedIds)
         return data
 
     @classmethod
-    def findOne(self, format=dict, filter={}, projection={}, recursive=False, **kwds) -> dict|any:
+    def findOne(self, format=dict, filter={}, projection={}, recursiveLevel=1, **kwds) -> dict|any:
         matchRecursiveID(filter)
         conn = Connection(self)
         data = conn.collection.find_one(filter, projection, **kwds)
@@ -96,7 +80,8 @@ class Query():
             mongol._db_data = data
             mongol._db_data_before_save = mongol._db_data
             return mongol
-        elif recursive: openReferenceTree(data)
+
+        openReferenceTree(data, conn, recursiveLevel)
         return data
 
     @classmethod
@@ -183,7 +168,7 @@ class Data(Validation):
 
     @property
     def changes(self) -> dict:
-        if not self._id: return {}
+        if self.isNew: return {}
 
         setObject: set = set(self.data.items())
         setDB: set = set(self.dataDB.items())
@@ -203,7 +188,7 @@ class Data(Validation):
 
     @property
     def changesAfterSave(self) -> dict:
-        if not self._id: return {}
+        if self.isNew: return {}
 
         setObject: set = set(self.data.items())
         setDB: set = set(self.dataDBChanged.items())
