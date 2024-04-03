@@ -16,7 +16,7 @@ class Connection(MongoClient):
         if mongol.__class__ == type:
             className = mongol.__name__
 
-        collectionName = inflection.pluralize(inflection.underscore(className))
+        collectionName = inflection.tableize(className)
 
         super().__init__(mongol.HOST, mongol.PORT)
 
@@ -46,7 +46,7 @@ class MorphicCollection:
     collection: Collection
 
     def __init__(self, connection: Connection, collection: str):
-        self.collection = connection.database[inflection.pluralize(inflection.underscore(collection))]
+        self.collection = connection.database[inflection.tableize(collection)]
 
     def find(self, id: str|ObjectId) -> dict:
         return self.collection.find_one({"_id": ObjectId(id)})

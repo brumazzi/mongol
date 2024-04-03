@@ -26,6 +26,7 @@ class DataValidation():
     def validateFieldsType(self):
         for field in self.fields:
             _field = self.__getattribute__(field)
+            if self.fieldTypes[field][0] == "Reference": continue
             if _field and type(_field).__name__ != self.__annotations__[field]:
                 self.error = field, f"{field} request a \"{self.__annotations__[field]}\" value type"
         for validationDict in self._validation_vars:

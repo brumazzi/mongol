@@ -5,6 +5,9 @@ from bson.objectid import ObjectId
 from mongol.connection import db_connect, Connection, MorphicCollection
 from mongol.validation import Validation, DataValidation
 from mongol.automation import run_before_after
+from mongol.utils import classFromModule
+
+from inflection import pluralize, singularize, tableize
 
 import re
 
@@ -20,31 +23,37 @@ def matchRecursiveID(data: dict):
 def openReferenceTree(data: dict, connection: Connection, recursiveLevel=1):
     if recursiveLevel == 0: return
 
-    for key, value in data.items():
+    dataKeys = list(data.keys())
+
+    for key in dataKeys:
+        value = data[key]
         if type(value) is list:
             for v in value:
-                if type(value) is dict: openReferenceTree(value, connection, recursiveLevel-1)
+                if type(v) is dict: openReferenceTree(value, connection, recursiveLevel)
         if type(value) is dict:
-            openReferenceTree(value, connection, recursiveLevel-1)
-        if not re.sub("\\w.+_id", "", key) and value:
-            collectionName: str = key[:-3]
+            openReferenceTree(value, connection, recursiveLevel)
 
-            morth = MorphicCollection(connection, collectionName)
-            result = morth.find(value)
-            data[key] = result
+        if not re.sub("\\w.+_id", "", key) and value:
+            collectionName: str = pluralize(key[:-3])
+
+            collection = connection.database[collectionName]
+            result = collection.find_one({"_id": value})
 
             openReferenceTree(result, connection, recursiveLevel-1)
-        if not re.sub("\\w.+_ids", "", key):
-            collectionName: str = key[:-4]
+            data[singularize(collectionName)] = result
+            del data[key]
+        if not re.sub("\\w.+_ids", "", key) and value:
+            collectionName: str = pluralize(key[:-4])
             dataList: list = list()
 
             for v in value:
-                morth = MorphicCollection(connection, collectionName)
-                result = morth.find(v)
+                collection = connection.database[collectionName]
+                result = collection.find_one({"_id": v})
                 dataList.append(result)
 
                 openReferenceTree(result, connection, recursiveLevel-1)
-            data[key] = dataList
+            data[collectionName] = dataList
+            del data[key]
 
 class Query():
     @classmethod
@@ -73,15 +82,16 @@ class Query():
         matchRecursiveID(filter)
         conn = Connection(self)
         data = conn.collection.find_one(filter, projection, **kwds)
-        del conn
 
         if format == object:
             mongol = self(**data)
             mongol._db_data = data
             mongol._db_data_before_save = mongol._db_data
+            del conn
             return mongol
 
         openReferenceTree(data, conn, recursiveLevel)
+        del conn
         return data
 
     @classmethod
@@ -122,7 +132,7 @@ class Data(DataValidation):
         if not skipValidate:
             if not self.validate():
                 return False
-        self.__save()
+        return self.__save()
 
     @run_before_after("save")
     @db_connect
@@ -131,6 +141,7 @@ class Data(DataValidation):
         for field in self.fields:
             if not field.startswith("_"):
                 saveData[field] = self.__getattribute__(field)
+        matchRecursiveID(saveData)
 
         if not self._db_data_before_save:
             self._db_data_before_save = self.data
@@ -216,7 +227,6 @@ class Data(DataValidation):
 
     @property
     def dataDBChanged(self) -> dict:
-        print(self._db_data)
         return { k: self._db_data_before_save.get(k) for k in self.fields }
 
     @property
@@ -224,5 +234,49 @@ class Data(DataValidation):
         return [ k for k in self.__annotations__.keys() if not k.startswith("_") ]
 
     @property
+    def fieldTypes(self) -> dict:
+        fields = {}
+        for field in self.fields:
+            typeValue = (self.__annotations__[field])
+            if typeValue.startswith("Reference"):
+                typeValue = ("Reference", typeValue[10:-1])
+
+            fields[field] = typeValue
+        return fields
+
+    @property
     def isNew(self) -> bool:
         return self._id == None
+
+execCode = '''
+def _%s(self, format=object):
+    from mongol.utils import classFromModule
+    field = "%s"
+    data = self.__getattribute__(field)
+    Class = classFromModule(self.fieldTypes[field][1])
+
+    if type(data) is list:
+        return Class.findMany(filter={"_id": {"$in": data}}, format=format)
+
+    return Class.findOne(filter={"_id": data}, format=format)
+'''
+
+
+def ReferenceCollection(Class):
+    for field, value in Class.__annotations__.items():
+        typeValue = Class.__annotations__[field]
+        if typeValue.startswith("Reference"):
+            typeValue = re.sub("(\\\\w+\\\\[|\\\\])", "", typeValue)
+
+            loc = {}
+            glob = {}
+            exec(execCode % (field, field), glob, loc)
+            if field.endswith("_ids"):
+                fieldName = pluralize(field[:-4])
+            else:
+                fieldName = singularize(field[:-3])
+            exec(f'Class.{fieldName} = loc["_{field}"]')
+
+
+    return Class
+
