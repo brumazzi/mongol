@@ -27,24 +27,18 @@ t3.save()
 
 c = Client(name="Test", age=20)
 c.type_id = t1._id
-# c.type_ids = [t2._id, t3._id]
-print(c.save())
-# print(c.errors)
+c.type_ids = [t2._id, t3._id]
 
 t1.client_id = c._id
 t1.user_id = c._id
 t1.save()
 
-# print(c.type(format=dict))
-print(Client.find(recursiveLevel=2))
+print(c.type())
 print(t1.user())
-# print(c.type.object)
+print(t1.client(format=dict, recursiveLevel=2))
 
-# print(c.types[1].object)
 
-# print(Client.find(recursiveLevel=2))
-
-# print(t1.client.object)
+print(Client.find(recursiveLevel=2))
 
 Type.deleteMany()
 Client.deleteMany()

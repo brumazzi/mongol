@@ -20,41 +20,6 @@ def matchRecursiveID(data: dict):
         elif not re.sub("(\\w.+_id|_id)", "", key):
             data[key] = ObjectId(data[key])
 
-def openReferenceTree(data: dict, connection: Connection, recursiveLevel=1):
-    if recursiveLevel == 0: return
-
-    dataKeys = list(data.keys())
-
-    for key in dataKeys:
-        value = data[key]
-        if type(value) is list:
-            for v in value:
-                if type(v) is dict: openReferenceTree(value, connection, recursiveLevel)
-        if type(value) is dict:
-            openReferenceTree(value, connection, recursiveLevel)
-
-        if not re.sub("\\w.+_id", "", key) and value:
-            collectionName: str = pluralize(key[:-3])
-
-            collection = connection.database[collectionName]
-            result = collection.find_one({"_id": value})
-
-            openReferenceTree(result, connection, recursiveLevel-1)
-            data[singularize(collectionName)] = result
-            del data[key]
-        if not re.sub("\\w.+_ids", "", key) and value:
-            collectionName: str = pluralize(key[:-4])
-            dataList: list = list()
-
-            for v in value:
-                collection = connection.database[collectionName]
-                result = collection.find_one({"_id": v})
-                dataList.append(result)
-
-                openReferenceTree(result, connection, recursiveLevel-1)
-            data[collectionName] = dataList
-            del data[key]
-
 class Query():
     @classmethod
     def find(self, format=dict, filter={}, projection={}, recursiveLevel=1, **kwds) -> list[dict|any]:
@@ -72,7 +37,7 @@ class Query():
         else:
             data = [ dict(item) for item in cursor ]
             for d in data:
-                openReferenceTree(d, conn, recursiveLevel)
+                self.__load_recurside_relationships__(d, conn, recursiveLevel)
 
         del conn
         return data
@@ -83,6 +48,8 @@ class Query():
         conn = Connection(self)
         data = conn.collection.find_one(filter, projection, **kwds)
 
+        if not data: return None
+
         if format == object:
             mongol = self(**data)
             mongol._db_data = data
@@ -90,12 +57,12 @@ class Query():
             del conn
             return mongol
 
-        openReferenceTree(data, conn, recursiveLevel)
+        self.__load_recurside_relationships__(data, conn, recursiveLevel)
         del conn
         return data
 
     @classmethod
-    def updateOne(self, filter={}, data={}, **kwds):
+    def updateOne(self, filter={}, data={}, **kwds) -> Cursor:
         matchRecursiveID(filter)
         conn = Connection(self)
         res = conn.collection.update_one(filter, {"$set": data}, **kwds)
@@ -103,7 +70,7 @@ class Query():
         return res
 
     @classmethod
-    def updateMany(self, filter={}, data={}, **kwds):
+    def updateMany(self, filter={}, data={}, **kwds) -> Cursor:
         matchRecursiveID(filter)
         conn = Connection(self)
         res = conn.collection.update_many(filter, {"$set": data}, **kwds)
@@ -111,7 +78,7 @@ class Query():
         return res
 
     @classmethod
-    def deleteOne(self, filter={}, **kwds):
+    def deleteOne(self, filter={}, **kwds) -> Cursor:
         matchRecursiveID(filter)
         conn = Connection(self)
         res = conn.collection.delete_one(filter, **kwds)
@@ -119,12 +86,50 @@ class Query():
         return res
 
     @classmethod
-    def deleteMany(self, filter={}, **kwds):
+    def deleteMany(self, filter={}, **kwds) -> Cursor:
         matchRecursiveID(filter)
         conn = Connection(self)
         res = conn.collection.delete_many(filter, **kwds)
         del conn
         return res
+
+    @classmethod
+    def __load_recurside_relationships__(self, data: dict, conn: Connection, recursiveLevel=1) -> None:
+        print(recursiveLevel)
+        if not recursiveLevel: return
+
+        dataKeys = list(data.keys())
+        for key in dataKeys:
+            if key == "_id": continue
+            dataValue = data[key]
+            print(self)
+
+            if not key in self.__annotations__: continue
+
+            if not self.__annotations__[key].startswith("Reference"):
+                if type(dataValue) is dict:
+                    self.__load_recurside_relationships__(dataValue, conn, recursiveLevel=recursiveLevel)
+                elif type(dataValue) is list:
+                    for item in dataValue:
+                        self.__load_recurside_relationships__(item, conn, recursiveLevel=recursiveLevel)
+                continue
+
+
+            module = re.sub("(\\w+\\[|\\])", "", self.__annotations__[key])
+            dataClass = classFromModule(module)
+
+            fieldName = re.sub("_\\w+$", "", key)
+            insertData = None
+            if type(dataValue) is list:
+                insertData = dataClass.find({"_id": {"$in": dataValue}}, recursiveLevel=recursiveLevel-1)
+                fieldName = pluralize(fieldName)
+            elif type(dataValue) is ObjectId:
+                insertData = dataClass.findOne({"_id": dataValue}, recursiveLevel=recursiveLevel-1)
+
+            data[fieldName] = insertData
+            del data[key]
+
+
 
 class Data(DataValidation):
 
@@ -141,7 +146,6 @@ class Data(DataValidation):
         for field in self.fields:
             if not field.startswith("_"):
                 saveData[field] = self.__getattribute__(field)
-        matchRecursiveID(saveData)
 
         if not self._db_data_before_save:
             self._db_data_before_save = self.data
@@ -249,16 +253,16 @@ class Data(DataValidation):
         return self._id == None
 
 execCode = '''
-def _%s(self, format=object):
+def _%s(self, format=object, recursiveLevel=1):
     from mongol.utils import classFromModule
     field = "%s"
     data = self.__getattribute__(field)
     Class = classFromModule(self.fieldTypes[field][1])
 
     if type(data) is list:
-        return Class.findMany(filter={"_id": {"$in": data}}, format=format)
+        return Class.findMany(filter={"_id": {"$in": data}}, format=format, recursiveLevel=recursiveLevel)
 
-    return Class.findOne(filter={"_id": data}, format=format)
+    return Class.findOne(filter={"_id": data}, format=format, recursiveLevel=recursiveLevel)
 '''
 
 
