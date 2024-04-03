@@ -95,15 +95,12 @@ class Query():
 
     @classmethod
     def __load_recurside_relationships__(self, data: dict, conn: Connection, recursiveLevel=1) -> None:
-        print(recursiveLevel)
         if not recursiveLevel: return
 
         dataKeys = list(data.keys())
         for key in dataKeys:
             if key == "_id": continue
             dataValue = data[key]
-            print(self)
-
             if not key in self.__annotations__: continue
 
             if not self.__annotations__[key].startswith("Reference"):
