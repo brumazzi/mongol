@@ -1,44 +1,29 @@
 from __future__ import annotations
-from mongol import Mongol, Validation, ReferenceCollection
+from mongol import Mongol
+
 from type import Type
-from mongol.utils import classFromModule
-
-import sys
-
-# print(classFromModule('type.Type'))
+from permission import Permission
+from user import User
 
 Mongol.DATABASE = "testDatabase"
 
-@ReferenceCollection
-class Client(Mongol):
-    name: str
-    age: int
-    type_id: Reference[type.Type]
-
-    type_ids: Reference[type.Type]
-    _delete: bool
-
-t1 = Type(name="Test 1", category="One")
-t1.save()
-t2 = Type(name="Test 2", category="Two")
-t2.save()
-t3 = Type(name="Test 3", category="Three")
-t3.save()
-
-c = Client(name="Test", age=20)
-c.type_id = t1._id
-c.type_ids = [t2._id, t3._id]
-
-t1.client_id = c._id
-t1.user_id = c._id
-t1.save()
-
-print(c.type())
-print(t1.user())
-print(t1.client(format=dict, recursiveLevel=2))
-
-
-print(Client.find(recursiveLevel=2))
-
+Permission.deleteMany()
 Type.deleteMany()
-Client.deleteMany()
+User.deleteMany()
+
+for permissionName in "read,write,create,delete".split(","):
+    Permission.insert(name=permissionName, description=f"can permit {permissionName} action")
+
+for typeName in "admin,user,visitor".split(","):
+    Type.insert(name=typeName)
+
+user = User(name="Admin", email="admin@admin.com")
+user.permission_ids = [ permission._id for permission in Permission.find(format=object, filter={"name": {"$in": ["read", "write", "create"]}}) ]
+user.type_id = Type.findOne(filter={"name": "admin"}, format=object)._id
+user.save()
+
+print(user.type().name)
+for permission in user.permissions():
+    print(permission.name)
+
+print(User.findOne(filter={"_id": user._id}, recursiveLevel=2))
