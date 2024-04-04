@@ -3,13 +3,15 @@ class Validation():
     _required: bool
     _min: int|float
     _max: int|float
-    _default: any = None
+    _default: any
+    _inList: list
 
-    def __init__(self, required: bool = False, min: int = None, max: int = None, default: any = None):
+    def __init__(self, required: bool = False, min: int = None, max: int = None, inList: list = None, default: any = None):
         self.required = required
         self.min = min
         self.max = max
         self._default = default
+        self._inList = inList
         pass
 
     @property
@@ -18,15 +20,17 @@ class Validation():
 
     def check(self, field: str, mongol: object):
         data:any = mongol.__getattribute__(field)
-        if self.required and not data:
+        if self.required and data == None:
             mongol.error = field, "can't be null"
-
         if type(data) is str:
             if self.min and self.min > len(data): mongol.error = field, f"string size needed be greater than or iqual {self.min}"
             elif self.max and self.max < len(data): mongol.error = field, f"string size needed be less than or iqual {self.max}"
         elif type(data) is int or type(data) is float:
             if self.min and self.min > data: mongol.error = field, f"needed be greater than or iqual {self.min}"
             elif self.max and self.max < data: mongol.error = field, f"needed be less than or iqual {self.max}"
+
+        if data and self._inList and not data in self._inList:
+            mongol.error = field, f"needs to be one of ({' | '.join(self._inList)})"
 
 class DataValidation():
     def validateFieldsType(self):

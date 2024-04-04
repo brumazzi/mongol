@@ -6,6 +6,7 @@ Mongol.DATABASE = "testDatabase"
 class Client(Mongol):
     name: str = Validation(required=True, min=4, max=20)
     age: int = Validation(required=True,min=18,max=160, default=10)
+    type: str = Validation(inList=["admin","user"])
 
     def checkName__Validation(self):
         if self.name.startswith("_"):
@@ -13,7 +14,7 @@ class Client(Mongol):
             # to errors stack
             self.error = "name", "cannot start with '_'!"
 
-client: Client = Client(name="_Van Andaime Pereira da Silva dos Santo de Souza Farias de Guarapé")
+client: Client = Client(name="_Van Andaime Pereira da Silva dos Santo de Souza Farias de Guarapé", type="tester")
 
 if not client.save():
     for error in client.errors.items():
