@@ -3,12 +3,18 @@ class Validation():
     _required: bool
     _min: int|float
     _max: int|float
+    _default: any = None
 
-    def __init__(self, required: bool = False, min: int = None, max: int = None):
+    def __init__(self, required: bool = False, min: int = None, max: int = None, default: any = None):
         self.required = required
         self.min = min
         self.max = max
+        self._default = default
         pass
+
+    @property
+    def default(self):
+        return self._default
 
     def check(self, field: str, mongol: object):
         data:any = mongol.__getattribute__(field)
@@ -53,5 +59,7 @@ class DataValidation():
         if not type(error) is list and not type(error) is tuple:
             raise "Error value require a list type"
 
-        self.errors.update({error[0]: error[1]})
+        if not error[0] in self.errors:
+            self.error[error[0]] = []
+        self.errors[error[0]].append(error[1])
         return self.error

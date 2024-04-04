@@ -22,6 +22,16 @@ def matchRecursiveID(data: dict):
 
 class Query():
     @classmethod
+    def insert(self, **kwds) -> object:
+        data = self(**kwds)
+        data.save()
+        return data
+
+    @classmethod
+    def insertMany(self, *args) -> list:
+        return [ self.insert(**item) for item in args ]
+
+    @classmethod
     def find(self, format=dict, filter={}, projection={}, recursiveLevel=1, **kwds) -> list[dict|any]:
         matchRecursiveID(filter)
         conn = Connection(self)
@@ -257,7 +267,7 @@ def _%s(self, format=object, recursiveLevel=1):
     Class = classFromModule(self.fieldTypes[field][1])
 
     if type(data) is list:
-        return Class.findMany(filter={"_id": {"$in": data}}, format=format, recursiveLevel=recursiveLevel)
+        return Class.find(filter={"_id": {"$in": data}}, format=format, recursiveLevel=recursiveLevel)
 
     return Class.findOne(filter={"_id": data}, format=format, recursiveLevel=recursiveLevel)
 '''

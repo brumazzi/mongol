@@ -49,8 +49,10 @@ class Mongol(Query, Data, Automation):
         for field in self.__annotations__:
             if not hasattr(self, field):
                 self.__setattr__(field, None)
-            self.registerValidation(field)
-            self.__setattr__(field, None)
+
+            if type(self.__getattribute__(field)).__name__ == "Validation":
+                self.registerValidation(field)
+                self.__setattr__(field, self.__getattribute__(field).default)
 
         for key in kwds.keys():
             if key == "_id":
@@ -63,6 +65,10 @@ class Mongol(Query, Data, Automation):
     @property
     def collection(self) -> Collection:
         return self.connection.collection
+
+    @property
+    def id(self):
+        return self._id
 
     def __repr__(self):
         output = f"<{self.__class__.__name__}:{self._id}"
