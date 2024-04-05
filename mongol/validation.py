@@ -28,6 +28,9 @@ class Validation():
         elif type(data) is int or type(data) is float:
             if self.min and self.min > data: mongol.error = field, f"needed be greater than or iqual {self.min}"
             elif self.max and self.max < data: mongol.error = field, f"needed be less than or iqual {self.max}"
+        elif type(data) is list:
+            if self.min and self.min > len(data): mongol.error = field, f"needed have {self.min} or more items"
+            elif self.max and self.max < len(data): mongol.error = field, f"needed have {self.max} or minus items"
 
         if data and self._inList and not data in self._inList:
             mongol.error = field, f"needs to be one of ({' | '.join(self._inList)})"
