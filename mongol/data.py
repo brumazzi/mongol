@@ -48,6 +48,7 @@ class Query():
             data = [ dict(item) for item in cursor ]
             for d in data:
                 self.__load_recurside_relationships__(d, conn, recursiveLevel)
+                d["_id"] = str(d["_id"])
 
         del conn
         return data
@@ -68,6 +69,8 @@ class Query():
             return mongol
 
         self.__load_recurside_relationships__(data, conn, recursiveLevel)
+        data["_id"] = str(data["_id"])
+
         del conn
         return data
 
@@ -107,7 +110,10 @@ class Query():
     def __load_recurside_relationships__(self, data: dict, conn: Connection, recursiveLevel=1) -> None:
         if not recursiveLevel: return
 
-        dataKeys = list(data.keys())
+        dataKeys:list = []
+        if isinstance(data, dict):
+            dataKeys = list(data.keys())
+
         for key in dataKeys:
             if key == "_id": continue
             dataValue = data[key]
@@ -151,8 +157,10 @@ class Data(DataValidation):
     def __save(self) -> bool:
         saveData = {}
         for field in self.fields:
-            if not field.startswith("_"):
-                saveData[field] = self.__getattribute__(field)
+            if self.__getattribute__(field) == None and hasattr(self, "__ignore_null__") and self.__getattribute__("__ignore_null__"):
+                continue
+
+            saveData[field] = self.__getattribute__(field)
 
         if not self._db_data_before_save:
             self._db_data_before_save = self.data

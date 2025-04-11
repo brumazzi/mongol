@@ -81,3 +81,7 @@ class Mongol(Query, Data, Automation):
 
     def __str__(self):
         return self.__repr__()
+
+    def __dict__(self):
+        output:dict = dict(self.data)
+        output["_id"] = str(self.id)
