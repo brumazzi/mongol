@@ -124,6 +124,8 @@ class Query():
                     self.__load_recurside_relationships__(dataValue, conn, recursiveLevel=recursiveLevel)
                 elif type(dataValue) is list:
                     for item in dataValue:
+                        if not isinstance(item, dict): continue
+
                         self.__load_recurside_relationships__(item, conn, recursiveLevel=recursiveLevel)
                 continue
 
@@ -294,7 +296,7 @@ def ReferenceCollection(Class):
                 fieldName = pluralize(field[:-4])
             else:
                 fieldName = singularize(field[:-3])
-            exec(f'Class.{fieldName} = loc["_{field}"]')
+            exec(f'Class.{fieldName} = property(loc["_{field}"])')
 
 
     return Class

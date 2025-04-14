@@ -22,8 +22,8 @@ user.permission_ids = [ permission._id for permission in Permission.find(format=
 user.type_id = Type.findOne(filter={"name": "admin"}, format=object)._id
 user.save()
 
-print(user.type().name)
-for permission in user.permissions():
+print(user.type.name)
+for permission in user.permissions:
     print(permission.name)
 
 print(User.findOne(filter={"_id": user._id}, recursiveLevel=2))
